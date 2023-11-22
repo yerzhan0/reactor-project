@@ -4,7 +4,10 @@
 
 package reactor
 
-import java.util.concurrent.locks.{Condition, ReentrantLock}
+import java.util.concurrent.locks.{
+  Condition,
+  ReentrantLock
+} // use ReentrantLock for better control over the lock vs synchronized or implicit locks
 import scala.collection.mutable.Queue
 import reactor.api.Event
 
@@ -17,8 +20,10 @@ final class BlockingEventQueue[T](private val capacity: Int) {
 
   private val queue = Queue[Event[T]]() // store events in a Java queue
   private val lock = new ReentrantLock() // lock for the queue
-  private val notFull = lock.newCondition() // condition for the queue not being full
-  private val notEmpty = lock.newCondition() // condition for the queue not being empty
+  private val notFull =
+    lock.newCondition() // condition for the queue not being full
+  private val notEmpty =
+    lock.newCondition() // condition for the queue not being empty
 
   @throws[InterruptedException]
   def enqueue[U <: T](e: Event[U]): Unit = {
@@ -28,7 +33,8 @@ final class BlockingEventQueue[T](private val capacity: Int) {
     lock.lockInterruptibly() // lock the queue. May throw InterruptedException
     try {
       while (queue.size >= capacity) { // cannot enqueu while the queue is full
-        notFull.await() // wait until the queue may be not full. May throw InterruptedException
+        notFull
+          .await() // wait until the queue may be not full. May throw InterruptedException
       }
       queue += e
         .asInstanceOf[Event[T]] // casting required for type conformance
@@ -43,7 +49,8 @@ final class BlockingEventQueue[T](private val capacity: Int) {
     lock.lockInterruptibly() // lock the queue. May throw InterruptedException
     try {
       while (queue.size == 0) {
-        notEmpty.await() // wait until the queue may be not empty. May throw InterruptedException
+        notEmpty
+          .await() // wait until the queue may be not empty. May throw InterruptedException
       }
       val dequeuedElement = queue.dequeue()
       notFull.signal() // signal that the queue may not be full
