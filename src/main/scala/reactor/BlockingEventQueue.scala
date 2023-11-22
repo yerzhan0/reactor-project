@@ -7,7 +7,7 @@ package reactor
 import scala.collection.mutable.Queue
 import reactor.api.Event
 
-final class BlockingEventQueue[T] (private val capacity: Int) {
+final class BlockingEventQueue[T](private val capacity: Int) {
 
   // Ensure that value for capacity is valid
   if (capacity <= 0) {
@@ -22,29 +22,50 @@ final class BlockingEventQueue[T] (private val capacity: Int) {
       return
     }
     synchronized {
-      while (queue.size == capacity) { // cannot enqueu while the queue is full
-        wait()
-        if (Thread.interrupted()) {
+      try {
+        while (queue.size >= capacity) { // cannot enqueu while the queue is full
+          if (Thread.interrupted()) { // interrupt check during the wait
+            throw new InterruptedException()
+          }
+          wait()
+        }
+        if (Thread.interrupted()) { // interrupt check before the invocation
           throw new InterruptedException()
         }
+        queue += e
+          .asInstanceOf[Event[T]] // casting required for type conformance
+        notifyAll()
+      } catch {
+        case e: InterruptedException => {
+          Thread.currentThread().interrupt() // restore the interrupted status
+          throw e
+        }
       }
-      queue += e.asInstanceOf[Event[T]] // casting required for type conformance
-      notifyAll()
     }
   }
 
   @throws[InterruptedException]
   def dequeue: Event[T] = {
     synchronized {
-      while (queue.size == 0) {
-        wait()
-        if (Thread.interrupted()) {
+      try {
+        while (queue.size == 0) {
+          if (Thread.interrupted()) { // interrupt check during the wait
+            throw new InterruptedException()
+          }
+          wait()
+        }
+        if (Thread.interrupted()) { // interrupt check before the invocation
           throw new InterruptedException()
         }
+        val dequeuedElement = queue.dequeue()
+        notifyAll()
+        return dequeuedElement
+      } catch {
+        case e: InterruptedException => {
+          Thread.currentThread().interrupt() // restore the interrupted status
+          throw e
+        }
       }
-      val dequeuedElement = queue.dequeue()
-      notifyAll()
-      return dequeuedElement
     }
   }
 
@@ -72,4 +93,4 @@ Staff feedback
 Not notification efficient
 getAll in comments (and with no protection)
 documentation not really explaining how it works
-*/
+ */
