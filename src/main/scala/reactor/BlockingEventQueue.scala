@@ -60,12 +60,12 @@ final class BlockingEventQueue[T](private val capacity: Int) {
     }
   }
 
-  // def getAll: Seq[Event[T]] = {
-  //   synchronized {
-  //     val allEvents = queue
-  //     return allEvents.asInstanceOf[Seq[Event[T]]]
-  //   }
-  // }
+  def getAll: Seq[Event[T]] = {
+    synchronized {
+      val allEvents = queue
+      return allEvents.asInstanceOf[Seq[Event[T]]]
+    }
+  }
 
   def getSize: Int = {
     lock.lock() // lock the queue

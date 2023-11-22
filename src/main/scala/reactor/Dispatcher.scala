@@ -70,7 +70,12 @@ final class Dispatcher(private val queueLength: Int = 10) {
 // Hint:
 final class WorkerThread[T](???) extends Thread {
 
- override def run(): Unit = ???
+// Hint:
+final class WorkerThread[T]() extends Thread {
+
+ override def run(): Unit = {
+  // do events habdling in that thread
+ }
 
  def cancelThread(): Unit = ???
 
