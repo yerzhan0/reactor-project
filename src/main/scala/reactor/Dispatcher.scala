@@ -15,9 +15,6 @@ final class Dispatcher(private val queueLength: Int = 10) {
   private val eventsQueue = new BlockingEventQueue[Any](queueLength)
   private val threadList: ListBuffer[WorkerThread] = ListBuffer.empty
 
-  /* The idea would be to start a new thread for each added handler monitoring events in there.
-  Once a handle is removed the corresponding thread should be interrupted.
-   */
   @throws[InterruptedException]
   def handleEvents(): Unit = {
     while (handlers.nonEmpty) {
@@ -47,7 +44,6 @@ final class Dispatcher(private val queueLength: Int = 10) {
     }
   }
 
-  // Hint:
   final class WorkerThread(private val handler: EventHandler[Any])
       extends Thread {
     def getHandler: EventHandler[Any] = handler
@@ -66,18 +62,3 @@ final class Dispatcher(private val queueLength: Int = 10) {
     }
   }
 }
-/*
-// Hint:
-final class WorkerThread[T](???) extends Thread {
-
-// Hint:
-final class WorkerThread[T]() extends Thread {
-
- override def run(): Unit = {
-  // do events habdling in that thread
- }
-
- def cancelThread(): Unit = ???
-
-}
- */
