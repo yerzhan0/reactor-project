@@ -4,64 +4,75 @@
 
 package reactor
 
-import reactor.api.{Event, EventHandler}
+import reactor.api.{Event, EventHandler, Handle}
 import scala.collection.mutable.Set
+import scala.collection.mutable.ListBuffer
 
 final class Dispatcher(private val queueLength: Int = 10) {
   require(queueLength > 0)
 
-  private val eventsQueue = new BlockingEventQueue[Event[T]](queueLength)
-  private val handlers: Set[EventHandler[T]] = Set()
-
+  private val handlers: Set[EventHandler[Any]] = Set()
+  private val eventsQueue = new BlockingEventQueue[Any](queueLength)
+  private val threadList: ListBuffer[WorkerThread] = ListBuffer.empty
 
   /* The idea would be to start a new thread for each added handler monitoring events in there.
   Once a handle is removed the corresponding thread should be interrupted.
-
-
-  */
+   */
   @throws[InterruptedException]
   def handleEvents(): Unit = {
-    while(!handlers.isEmpty) {
-        handlers.foreach { handler =>
-           val workerThread = new Thread {
-            override def run {
-                val handle = handler.getHandle
-                var event = handle.read
-                while (event != null) {
-                    eventsQueue.enqueue(Event(event, handler))
-                    event = handle.read
-                }
-                // cancel the thread after getting null
-            }
-           }
-        }
-    // woprth checking if a thread for a handler (still) running and launch a new one if needed
-    // then pop an event from a queue and handle it, go through all events 
-
-   }  
+    while (handlers.nonEmpty) {
+      val event = eventsQueue.dequeue
+      val handler = event.getHandler
+      if (handlers.contains(handler)){
+        event.dispatch()
+      }
+    }
   }
 
   def addHandler[T](h: EventHandler[T]): Unit = {
-    handlers += h
+    val thread = new WorkerThread(h.asInstanceOf[EventHandler[Any]])
+    threadList += thread
+    handlers += h.asInstanceOf[EventHandler[Any]]
+    thread.start()
   }
 
   def removeHandler[T](h: EventHandler[T]): Unit = {
-    handlers -= h
-    // cancel thread assoicated with the handler 
+    val removed = handlers.remove(h.asInstanceOf[EventHandler[Any]])
+    if (removed) {
+      threadList.foreach { thread =>
+        if (thread.getHandler == h) {
+          thread.cancelThread()
+        }
+      }
+    }
   }
 
-//   // Hint:
-//   final class WorkerThread[T]() extends Thread {   
+  // Hint:
+  final class WorkerThread(private val handler: EventHandler[Any])
+      extends Thread {
+    def getHandler: EventHandler[Any] = handler
+    override def run(): Unit = {
+      val handle = handler.getHandle
+      var eventData = handle.read
+      while (eventData != null) {
+        eventsQueue.enqueue(Event(eventData, handler))
+        eventData = handle.read
+      }
+      eventsQueue.enqueue(Event(eventData, handler))
+    }
 
-//    override def run(): Unit = {
-//     handlers.foreach { handler =>
-//     //    handler.get
-//    }   
+    def cancelThread(): Unit = {
+      this.interrupt()
+    }
+  }
+}
+/*
+// Hint:
+final class WorkerThread[T](???) extends Thread {
 
-//    def cancelThread(): Unit = ???  
+ override def run(): Unit = ???
 
-//   }
-//   }
+ def cancelThread(): Unit = ???
 
 }
-
+ */
