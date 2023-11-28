@@ -1,5 +1,5 @@
 // group 17
-// 123456 Firstname Lastname
+// 906984 Yerzhan Zhamashev
 // 936323 Nikolai Semin
 
 package reactor
