@@ -1,3 +1,7 @@
+// group 17
+// 906984 Yerzhan Zhamashev
+// 936323 Nikolai Semin
+
 package reactor
 
 import reactor.api.{Event, EventHandler, Handle}
