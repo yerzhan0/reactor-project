@@ -16,9 +16,9 @@ import scala.collection.immutable.{List}
 final class Dispatcher(private val queueLength: Int = 10) {
   require(queueLength > 0, "Queue length must be greater than 0.")
 
-  private val handlers: Set[EventHandler[Any]] = Set()
+  private val handlers: Set[EventHandler[_]] = Set()
   private val eventsQueue = new BlockingEventQueue[Any](queueLength)
-  private var threadList: List[WorkerThread] = List.empty
+  private var threadList: List[WorkerThread[_]] = List.empty
 
   /**
    * Continuously handles events from the queue as long as there are handlers available.
@@ -42,7 +42,7 @@ final class Dispatcher(private val queueLength: Int = 10) {
    * @tparam T The type of event data the handler is dealing with.
    */
   def addHandler[T](h: EventHandler[T]): Unit = {
-    if (handlers.add(h.asInstanceOf[EventHandler[Any]])) {
+    if (handlers.add(h)) {
       addAndStartHandlerWorker(h)
     }
   }
@@ -54,7 +54,7 @@ final class Dispatcher(private val queueLength: Int = 10) {
    * @tparam T The type of event data the handler is dealing with.
    */
   private def addAndStartHandlerWorker[T](h: EventHandler[T]): Unit = {
-    val worker = new WorkerThread(h.asInstanceOf[EventHandler[Any]])
+    val worker = new WorkerThread(h)
     threadList = worker :: threadList
     worker.start()
   }
@@ -66,7 +66,7 @@ final class Dispatcher(private val queueLength: Int = 10) {
    * @tparam T The type of event data the handler is dealing with.
    */
   def removeHandler[T](h: EventHandler[T]): Unit = {
-    if (handlers.remove(h.asInstanceOf[EventHandler[Any]])) {
+    if (handlers.remove(h)) {
       // Stop and remove the threads associated with the handler from the list
       threadList = threadList.filter(thread => {
         if (thread.getHandler == h) {
@@ -82,8 +82,8 @@ final class Dispatcher(private val queueLength: Int = 10) {
   /**
    * Inner class representing a worker thread for each event handler.
    */
-  private final class WorkerThread(private val handler: EventHandler[Any]) extends Thread {
-    def getHandler: EventHandler[Any] = handler
+  private final class WorkerThread[T](private val handler: EventHandler[T]) extends Thread {
+    def getHandler: EventHandler[_] = handler
 
     override def run(): Unit = {
       try {
