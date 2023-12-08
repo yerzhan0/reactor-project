@@ -192,9 +192,9 @@ class HangmanGame(
     private def isMessageValid(message: String): Boolean =
       message != null && !message.isEmpty && message.forall(_.isLetter)
 
-    def identifiedThemself: Boolean = playerName.isDefined
+    def identifiedThemself: Boolean = this.playerName.isDefined
 
-    def getPlayerName: Option[String] = playerName
+    def getPlayerName: Option[String] = this.playerName
   }
 }
 
